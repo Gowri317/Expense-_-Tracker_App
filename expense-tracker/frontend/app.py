@@ -188,17 +188,17 @@ with st.sidebar:
 # ─── Page Router ──────────────────────────────────────────────────────────────
 
 if page == "📊 Dashboard":
-    from frontend.pages.dashboard import render_dashboard
+    from frontend.views.dashboard import render_dashboard
     render_dashboard()
 elif page == "💸 Add Expense":
-    from frontend.pages.add_expense import render_add_expense
+    from frontend.views.add_expense import render_add_expense
     render_add_expense()
 elif page == "💰 Add Income":
-    from frontend.pages.add_income import render_add_income
+    from frontend.views.add_income import render_add_income
     render_add_income()
 elif page == "🎯 Budgets":
-    from frontend.pages.budgets import render_budgets
+    from frontend.views.budgets import render_budgets
     render_budgets()
 elif page == "📜 History":
-    from frontend.pages.history import render_history
+    from frontend.views.history import render_history
     render_history()
