@@ -35,3 +35,6 @@ Thumbs.db
 
 # Alembic
 migrations/versions/*.pyc
+
+# Local scripts
+start_network.bat

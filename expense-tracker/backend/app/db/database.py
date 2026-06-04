@@ -10,13 +10,18 @@ from backend.app.core.config import get_settings
 
 settings = get_settings()
 
+# Render provides postgres:// but SQLAlchemy 2.x requires postgresql://
+database_url = settings.DATABASE_URL
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
 # Handle SQLite-specific connect args
 connect_args = {}
-if settings.DATABASE_URL.startswith("sqlite"):
+if database_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    database_url,
     connect_args=connect_args,
     echo=False,
 )

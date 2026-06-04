@@ -3,12 +3,17 @@ API Client: httpx-based wrapper for all backend API calls.
 Injects auth token from Streamlit session state automatically.
 """
 
+import os
 import httpx
 import streamlit as st
 from datetime import date
 from typing import Optional, List, Dict, Any
+from dotenv import load_dotenv
 
-BACKEND_URL = "http://localhost:8000"
+# Load .env from project root
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env"))
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 def _get_headers() -> dict:
