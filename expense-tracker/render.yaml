@@ -10,6 +10,7 @@ services:
     name: expense-tracker-backend
     runtime: python
     plan: free
+    rootDir: expense-tracker
     buildCommand: pip install -r requirements-backend.txt
     startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -31,6 +32,7 @@ services:
     name: expense-tracker-frontend
     runtime: python
     plan: free
+    rootDir: expense-tracker
     buildCommand: pip install -r requirements-frontend.txt
     startCommand: streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
     envVars:
