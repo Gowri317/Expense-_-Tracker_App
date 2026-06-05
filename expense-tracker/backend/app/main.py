@@ -54,7 +54,29 @@ app.include_router(summary_router)
 app.include_router(budgets_router)
 
 
+@app.get("/", tags=["Root"])
+def root():
+    """Root endpoint — returns basic info and registered routes."""
+    routes = [{"path": r.path, "methods": list(r.methods) if hasattr(r, 'methods') else []} for r in app.routes]
+    return {
+        "app": "Expense Tracker API",
+        "version": "1.0.0",
+        "routes_count": len(routes),
+        "routes": routes,
+    }
+
+
 @app.get("/health", tags=["Health"])
 def health_check():
     """Health check endpoint — returns 200 if the server is running."""
     return {"status": "healthy", "message": "Expense Tracker API is running"}
+
+
+# Log all registered routes at import time
+import logging
+_logger = logging.getLogger("expense_tracker")
+_logger.setLevel(logging.INFO)
+for _route in app.routes:
+    _methods = getattr(_route, 'methods', set())
+    _logger.info(f"Registered route: {_methods} {_route.path}")
+
