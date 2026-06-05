@@ -20,7 +20,12 @@ from backend.app.api.budgets import router as budgets_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: create tables and seed default data."""
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        import logging
+        logging.error(f"Database initialization failed: {e}")
+        logging.error("App will start without database initialization. Tables may need to be created manually.")
     yield
 
 

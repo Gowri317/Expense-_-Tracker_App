@@ -7,6 +7,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
 from backend.app.core.config import get_settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -14,6 +17,8 @@ settings = get_settings()
 database_url = settings.DATABASE_URL
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+logger.info(f"Database URL scheme: {database_url.split('://')[0] if '://' in database_url else 'unknown'}")
 
 # Handle SQLite-specific connect args
 connect_args = {}
@@ -24,6 +29,7 @@ engine = create_engine(
     database_url,
     connect_args=connect_args,
     echo=False,
+    pool_pre_ping=True,  # Auto-detect stale connections
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
