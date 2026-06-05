@@ -3,7 +3,31 @@ Auth utilities: login/register forms and session state management.
 """
 
 import streamlit as st
-from frontend.utils.api_client import login, register
+import httpx
+import os
+import time
+from frontend.utils.api_client import login, register, BACKEND_URL
+
+
+def wake_backend():
+    """Ping the backend to wake it up if it's sleeping (Render free tier)."""
+    if st.session_state.get("_backend_awake"):
+        return True
+    
+    with st.spinner("⏳ Waking up the server (free tier may take up to 60 seconds)..."):
+        for attempt in range(6):  # Try 6 times, ~60 seconds total
+            try:
+                with httpx.Client(timeout=15) as client:
+                    resp = client.get(f"{BACKEND_URL}/health")
+                    if resp.status_code == 200:
+                        st.session_state._backend_awake = True
+                        return True
+            except Exception:
+                pass
+            if attempt < 5:
+                time.sleep(10)
+    
+    return False
 
 
 def init_session_state():
@@ -51,6 +75,12 @@ def show_auth_page():
         """,
         unsafe_allow_html=True,
     )
+
+    # Wake up backend if sleeping (Render free tier)
+    if not wake_backend():
+        st.error("⚠️ Server is currently unavailable. Please wait a moment and refresh the page.")
+        st.info("💡 On the free plan, the server may take up to 60 seconds to wake up. Try refreshing in a minute.")
+        return False
 
     tab_login, tab_register = st.tabs(["🔐 Login", "📝 Register"])
 
