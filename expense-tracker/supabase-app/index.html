@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Expense Tracker — Take control of your finances. Track income, expenses, budgets, and view detailed monthly summaries.">
+    <title>Expense Tracker</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <!-- Supabase JS SDK v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+<!-- ── Loading Overlay ───────────────────────────────────────────────────── -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+</div>
+
+<!-- ── Toast Container ───────────────────────────────────────────────────── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     AUTH PAGE — shown when not logged in
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="auth-page" id="authPage">
+    <div class="auth-container">
+        <div class="auth-brand">
+            <h1>💰 Expense Tracker</h1>
+            <p>Take control of your finances</p>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">🔐 Login</button>
+            <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">📝 Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <div class="auth-form" id="loginForm">
+            <h3>Welcome back!</h3>
+            <div class="form-group">
+                <label class="form-label" for="loginEmail">Email</label>
+                <input class="form-input" type="email" id="loginEmail" placeholder="Enter your email" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="loginPassword">Password</label>
+                <input class="form-input" type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password">
+            </div>
+            <button class="btn btn-primary btn-block mt-2" id="btnLogin" onclick="handleLogin()">Login</button>
+        </div>
+
+        <!-- Register Form -->
+        <div class="auth-form hidden" id="registerForm">
+            <h3>Create your account</h3>
+            <div class="form-group">
+                <label class="form-label" for="regDisplayName">Display Name</label>
+                <input class="form-input" type="text" id="regDisplayName" placeholder="Choose a display name (min 3 chars)">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="regEmail">Email</label>
+                <input class="form-input" type="email" id="regEmail" placeholder="Enter your email" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="regPassword">Password</label>
+                <input class="form-input" type="password" id="regPassword" placeholder="Choose a password (min 6 chars)" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="regConfirm">Confirm Password</label>
+                <input class="form-input" type="password" id="regConfirm" placeholder="Confirm your password" autocomplete="new-password">
+            </div>
+            <button class="btn btn-primary btn-block mt-2" id="btnRegister" onclick="handleRegister()">Create Account</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     APP SHELL — shown when logged in
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="app-layout hidden" id="appShell">
+
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleSidebar()">☰</button>
+
+    <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h2>💰 Expense Tracker</h2>
+        </div>
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-user">
+            <div class="sidebar-user-label">Logged in as</div>
+            <div class="sidebar-user-name" id="sidebarUsername">👤 User</div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <button class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+                <span class="nav-icon">📊</span> Dashboard
+            </button>
+            <button class="nav-item" data-page="add-expense" onclick="navigateTo('add-expense')">
+                <span class="nav-icon">💸</span> Add Expense
+            </button>
+            <button class="nav-item" data-page="add-income" onclick="navigateTo('add-income')">
+                <span class="nav-icon">💰</span> Add Income
+            </button>
+            <button class="nav-item" data-page="budgets" onclick="navigateTo('budgets')">
+                <span class="nav-icon">🎯</span> Budgets
+            </button>
+            <button class="nav-item" data-page="history" onclick="navigateTo('history')">
+                <span class="nav-icon">📜</span> History
+            </button>
+        </nav>
+
+        <div class="sidebar-divider"></div>
+        <button class="btn-logout" onclick="handleLogout()">🚪 Logout</button>
+
+        <div class="sidebar-footer">v2.0.0 • Built with ❤️</div>
+    </aside>
+
+    <!-- ── Main Content ──────────────────────────────────────────────────── -->
+    <main class="main-content">
+
+        <!-- ─── Dashboard Page ───────────────────────────────────────────── -->
+        <section class="page-section active" id="page-dashboard">
+            <h1 class="page-title"><span class="gradient-text">Dashboard</span></h1>
+            <p class="page-subtitle">Your financial overview at a glance</p>
+            <hr class="page-divider">
+
+            <div class="month-picker">
+                <label for="dashboardMonth">Select Month</label>
+                <input type="month" id="dashboardMonth">
+            </div>
+
+            <div class="metric-grid" id="dashboardMetrics">
+                <div class="metric-card">
+                    <div class="metric-label">💰 Total Income</div>
+                    <div class="metric-value" id="metricIncome">₹0.00</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">💸 Total Expenses</div>
+                    <div class="metric-value" id="metricExpenses">₹0.00</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">📈 Net Savings</div>
+                    <div class="metric-value" id="metricSavings">₹0.00</div>
+                    <div class="metric-delta" id="metricSavingsDelta"></div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="chart-card">
+                    <h4>Expenses by Category</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="chartPie"></canvas>
+                    </div>
+                    <div class="empty-state hidden" id="pieEmpty">
+                        <div class="icon">📊</div>
+                        <p>No expenses recorded this month</p>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h4>Income vs Expenses (6 Months)</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="chartBar"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Breakdown Table -->
+            <div class="mt-3 hidden" id="breakdownSection">
+                <div class="chart-card">
+                    <h4>Category Breakdown</h4>
+                    <table class="data-table" id="breakdownTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Category</th>
+                                <th>Amount (₹)</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="breakdownBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Budget Progress -->
+            <div class="mt-3 hidden" id="budgetProgressSection">
+                <div class="chart-card">
+                    <h4>🎯 Monthly Budget Limits Progress</h4>
+                    <div id="budgetProgressBars"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Add Expense Page ─────────────────────────────────────────── -->
+        <section class="page-section" id="page-add-expense">
+            <h1 class="page-title"><span class="gradient-text">Add Expense</span></h1>
+            <p class="page-subtitle">Record a new expense</p>
+            <hr class="page-divider">
+
+            <div class="grid-2-1">
+                <div class="card">
+                    <h4 class="card-title">💸 Expense Details</h4>
+                    <div class="form-group">
+                        <label class="form-label" for="expAmount">Amount (₹)</label>
+                        <input class="form-input" type="number" id="expAmount" min="0.01" step="0.50" placeholder="Enter amount">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="expCategory">Category</label>
+                        <select class="form-select" id="expCategory"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="expDate">Date</label>
+                        <input class="form-input" type="date" id="expDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="expNote">Note (optional)</label>
+                        <textarea class="form-textarea" id="expNote" maxlength="500" placeholder="What was this expense for?"></textarea>
+                    </div>
+                    <button class="btn btn-primary btn-block" id="btnAddExpense" onclick="handleAddExpense()">💸 Add Expense</button>
+                </div>
+
+                <div>
+                    <div class="card">
+                        <h4 class="card-title">🏷️ Custom Category</h4>
+                        <div class="form-group">
+                            <label class="form-label" for="newCatName">Category Name</label>
+                            <input class="form-input" type="text" id="newCatName" maxlength="100" placeholder="e.g., Groceries, Gym">
+                        </div>
+                        <button class="btn btn-secondary btn-block" onclick="handleAddCategory()">➕ Add Category</button>
+                    </div>
+
+                    <div class="card mt-2">
+                        <h4 class="card-title">Available Categories</h4>
+                        <div class="category-list" id="categoryBadges"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Add Income Page ──────────────────────────────────────────── -->
+        <section class="page-section" id="page-add-income">
+            <h1 class="page-title"><span class="gradient-text">Add Income</span></h1>
+            <p class="page-subtitle">Record a new income entry</p>
+            <hr class="page-divider">
+
+            <div class="grid-2-1">
+                <div class="card" style="border-color: rgba(16, 185, 129, 0.15); background: var(--gradient-green);">
+                    <h4 class="card-title">💰 Income Details</h4>
+                    <div class="form-group">
+                        <label class="form-label" for="incAmount">Amount (₹)</label>
+                        <input class="form-input" type="number" id="incAmount" min="0.01" step="100" placeholder="Enter amount">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="incSource">Source</label>
+                        <input class="form-input" type="text" id="incSource" maxlength="200" placeholder="e.g., Salary, Freelance, Dividends">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="incDate">Date</label>
+                        <input class="form-input" type="date" id="incDate">
+                    </div>
+                    <button class="btn btn-green btn-block" id="btnAddIncome" onclick="handleAddIncome()">💰 Add Income</button>
+                </div>
+
+                <div>
+                    <div class="card" style="border-color: rgba(16, 185, 129, 0.15); background: var(--gradient-green);">
+                        <h4 class="card-title">💡 Tips</h4>
+                        <div class="tip-item"><span style="font-size:1.1rem">🏢</span> <strong class="tip-title">Salary</strong><br><span class="tip-desc">Record your monthly salary</span></div>
+                        <div class="tip-item"><span style="font-size:1.1rem">💻</span> <strong class="tip-title">Freelance</strong><br><span class="tip-desc">Track project-based income</span></div>
+                        <div class="tip-item"><span style="font-size:1.1rem">📈</span> <strong class="tip-title">Investments</strong><br><span class="tip-desc">Dividend and interest income</span></div>
+                        <div class="tip-item"><span style="font-size:1.1rem">🎁</span> <strong class="tip-title">Gifts</strong><br><span class="tip-desc">Money received as gifts</span></div>
+                        <div class="tip-item"><span style="font-size:1.1rem">🏠</span> <strong class="tip-title">Rental</strong><br><span class="tip-desc">Rental income from property</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Budgets Page ─────────────────────────────────────────────── -->
+        <section class="page-section" id="page-budgets">
+            <h1 class="page-title"><span class="gradient-text">Category Budgets</span></h1>
+            <p class="page-subtitle">Set monthly spending limits for each category to stay on track</p>
+            <hr class="page-divider">
+
+            <div class="month-picker">
+                <label for="budgetsMonth">Select Month</label>
+                <input type="month" id="budgetsMonth">
+            </div>
+
+            <hr class="page-divider">
+
+            <div class="grid-1-1_5">
+                <div class="card">
+                    <h4 class="card-title">🎯 Set Budget Limit</h4>
+                    <div class="form-group">
+                        <label class="form-label" for="budCategory">Category</label>
+                        <select class="form-select" id="budCategory"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="budAmount">Monthly Limit (₹)</label>
+                        <input class="form-input" type="number" id="budAmount" min="1" step="500" placeholder="e.g. 5000">
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="handleSetBudget()">🎯 Set Budget</button>
+                </div>
+
+                <div class="card">
+                    <h4 class="card-title">📋 Configured Budgets for <span id="budgetMonthLabel"></span></h4>
+                    <div id="budgetListContainer">
+                        <div class="empty-state" id="budgetListEmpty">
+                            <div class="icon">🎯</div>
+                            <p>No budgets configured yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── History Page ─────────────────────────────────────────────── -->
+        <section class="page-section" id="page-history">
+            <h1 class="page-title"><span class="gradient-text">Transaction History</span></h1>
+            <p class="page-subtitle">View, filter, edit, and delete your transactions</p>
+            <hr class="page-divider">
+
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label" for="histStartDate">Start Date</label>
+                    <input class="form-input" type="date" id="histStartDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="histEndDate">End Date</label>
+                    <input class="form-input" type="date" id="histEndDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="histCategory">Category Filter</label>
+                    <select class="form-select" id="histCategory">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-secondary mb-2" onclick="loadHistoryData()">🔄 Refresh</button>
+
+            <hr class="page-divider">
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchHistoryTab('expenses')">💸 Expenses</button>
+                <button class="tab-btn" onclick="switchHistoryTab('income')">💰 Income</button>
+            </div>
+
+            <!-- Expenses Tab -->
+            <div class="tab-content active" id="histTab-expenses">
+                <div class="stats-bar expense hidden" id="expenseStatsBar">
+                    <span class="count">Showing <strong id="expenseCount">0</strong> expenses</span>
+                    <span class="total" id="expenseTotal">Total: ₹0.00</span>
+                </div>
+                <div id="expensesList"></div>
+                <div class="empty-state hidden" id="expensesEmpty">
+                    <div class="icon">💸</div>
+                    <p>No expenses found for the selected period</p>
+                </div>
+            </div>
+
+            <!-- Income Tab -->
+            <div class="tab-content" id="histTab-income">
+                <div class="stats-bar income hidden" id="incomeStatsBar">
+                    <span class="count">Showing <strong id="incomeCount">0</strong> income entries</span>
+                    <span class="total" id="incomeTotal">Total: ₹0.00</span>
+                </div>
+                <div id="incomesList"></div>
+                <div class="empty-state hidden" id="incomesEmpty">
+                    <div class="icon">💰</div>
+                    <p>No income entries found for the selected period</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
